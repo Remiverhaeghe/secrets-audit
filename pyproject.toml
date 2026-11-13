@@ -1,0 +1,35 @@
+[project]
+name = "secrets-audit"
+version = "0.1.0"
+description = "Audit d'hygiène des secrets dans des dépôts git locaux"
+requires-python = ">=3.10"
+
+[project.scripts]
+secrets-audit = "secrets_audit.cli:main"
+
+[tool.coverage.run]
+source = ["secrets_audit"]
+branch = true
+# __main__.py se limite à appeler cli.main : rien à y tester.
+omit = ["secrets_audit/__main__.py"]
+
+[tool.coverage.report]
+# Seuil à relever à mesure que la couverture progresse : la CI échoue en dessous.
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ['if __name__ == "__main__":']
+
+[tool.pylint.basic]
+# Convention de Rémi : p pour un paramètre, v pour une variable locale, r pour la
+# valeur retournée, a pour un attribut d'instance.
+argument-rgx = "^(_?p[A-Z][A-Za-z0-9]*|_[a-z]*|self|cls)$"
+variable-rgx = "^([vr][A-Z][A-Za-z0-9]*|_)$"
+inlinevar-rgx = "^([vr][A-Z][A-Za-z0-9]*|_)$"
+# Les champs d'une dataclass gardent un nom simple (finding.path).
+attr-rgx = "^(a[A-Z][A-Za-z0-9]*|[a-z_][a-z0-9_]*)$"
+const-rgx = "^(_?[A-Z][A-Z0-9_]*|__version__|logger)$"
+
+[tool.pylint."messages control"]
+# Les appels git échouent de façons variées : la ligne de commande les journalise.
+disable = ["broad-exception-caught"]

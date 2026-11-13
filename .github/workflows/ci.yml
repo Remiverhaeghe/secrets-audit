@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualite:
+    name: Tests et qualité
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # Historique complet : l'audit lit aussi les anciens commits
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Outils de qualité
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r requirements-dev.txt
+      - name: Format
+        run: .venv/bin/black --check .
+      - name: Analyse statique
+        run: .venv/bin/pylint secrets_audit
+      - name: Sécurité du code
+        run: .venv/bin/bandit -q -r secrets_audit
+      - name: Tests et couverture
+        run: |
+          .venv/bin/coverage run -m unittest discover -s tests
+          .venv/bin/coverage report
+      - name: Audit du dépôt par lui-même
+        run: python3 -m secrets_audit .

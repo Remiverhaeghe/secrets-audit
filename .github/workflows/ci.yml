@@ -36,3 +36,10 @@ jobs:
           .venv/bin/coverage report
       - name: Audit du dépôt par lui-même
         run: python3 -m secrets_audit .
+
+  reutilisable:
+    name: Workflow réutilisable
+    # Le dépôt s'audite aussi par le workflow que les autres dépôts appellent
+    uses: ./.github/workflows/audit.yml
+    with:
+      version: ${{ github.sha }}

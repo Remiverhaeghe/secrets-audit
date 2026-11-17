@@ -3,6 +3,7 @@
 ## Non publié
 
 ### Fonctionnalités
+- Workflow réutilisable `audit.yml` pour auditer un autre dépôt depuis sa CI, avec gravité minimale et chemins ignorés en entrée
 - Audit des dépôts git d'un dossier : fichiers sensibles suivis par git, présents sans être ignorés ou restés dans l'historique, et secrets en clair dans les fichiers suivis (clés privées, jetons GitHub, Slack, JWT, clés AWS, mots de passe affectés à une variable)
 - Les valeurs trouvées ne sont jamais affichées en entier
 - Trouvailles ambiguës ramenées à une gravité faible dans les tests, fixtures, simulations et documentation

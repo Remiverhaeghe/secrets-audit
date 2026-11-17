@@ -8,7 +8,20 @@ from secrets_audit.rules import (
     redact,
 )
 from secrets_audit.scanner import scan_text
-from tests.support import AWS_KEY, GITHUB_TOKEN, PRIVATE_KEY_LINE, REAL_PASSWORD
+from tests.support import (
+    ANTHROPIC_KEY,
+    AWS_KEY,
+    DATABASE_URL,
+    GITHUB_TOKEN,
+    GITLAB_TOKEN,
+    GOOGLE_KEY,
+    NPM_TOKEN,
+    OPENAI_KEY,
+    PRIVATE_KEY_LINE,
+    REAL_PASSWORD,
+    STRIPE_KEY,
+    TELEGRAM_TOKEN,
+)
 
 
 class PlaceholderTest(unittest.TestCase):
@@ -132,6 +145,33 @@ class ScanTextTest(unittest.TestCase):
                 + "abcdefghijk"
             ),
         )
+
+    def test_service_keys(self):
+        for vRule, vValue in (
+            ("gitlab-token", GITLAB_TOKEN),
+            ("stripe-key", STRIPE_KEY),
+            ("google-api-key", GOOGLE_KEY),
+            ("anthropic-key", ANTHROPIC_KEY),
+            ("openai-key", OPENAI_KEY),
+            ("npm-token", NPM_TOKEN),
+            ("telegram-bot-token", TELEGRAM_TOKEN),
+        ):
+            with self.subTest(vRule):
+                self.assertEqual([vRule], self.rules_found(f"cle = {vValue}"))
+                vDetail = scan_text("repo", "f", vValue)[0].detail
+                self.assertNotIn(vValue, vDetail)
+
+    def test_test_mode_keys_are_not_reported(self):
+        self.assertEqual([], self.rules_found("sk" + "_test_" + "a1B2c3D4" * 3))
+
+    def test_database_url_hides_password_and_skips_examples(self):
+        vFindings = scan_text("repo", "compose.yml", f"DATABASE_URL={DATABASE_URL}")
+        self.assertEqual(["database-url"], [vItem.rule for vItem in vFindings])
+        self.assertNotIn(REAL_PASSWORD, vFindings[0].detail)
+        self.assertEqual(
+            [], self.rules_found("postgres" + "ql://app:${DB_PASSWORD}@db/app")
+        )
+        self.assertEqual([], self.rules_found("mysql" + "://root:changeme@localhost"))
 
     def test_generic_assignment_reports_line_and_hides_value(self):
         vFindings = scan_text(

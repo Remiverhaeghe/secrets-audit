@@ -47,6 +47,61 @@ SECRET_RULES = (
         "high",
     ),
     SecretRule(
+        "gitlab-token",
+        "jeton GitLab",
+        re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}\b"),
+        "high",
+    ),
+    SecretRule(
+        "stripe-key",
+        "clé secrète Stripe",
+        re.compile(r"\b[sr]k_live_[A-Za-z0-9]{24,}\b"),
+        "high",
+    ),
+    SecretRule(
+        "google-api-key",
+        "clé d'API Google",
+        re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
+        "high",
+    ),
+    # Avant la règle OpenAI : une clé Anthropic commence aussi par « sk- »
+    SecretRule(
+        "anthropic-key",
+        "clé d'API Anthropic",
+        re.compile(r"\bsk-ant-[A-Za-z0-9_-]{32,}"),
+        "high",
+    ),
+    SecretRule(
+        "openai-key",
+        "clé d'API OpenAI",
+        re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{32,}"),
+        "high",
+    ),
+    SecretRule(
+        "npm-token",
+        "jeton npm",
+        re.compile(r"\bnpm_[A-Za-z0-9]{36}\b"),
+        "high",
+    ),
+    SecretRule(
+        "telegram-bot-token",
+        "jeton de bot Telegram",
+        re.compile(r"\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b"),
+        "high",
+    ),
+    # Seul le mot de passe est masqué et vérifié : « postgres://user:${PASS}@ » est un exemple
+    SecretRule(
+        "database-url",
+        "mot de passe dans une adresse de base de données",
+        re.compile(
+            r"\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|amqp)://"
+            r"[^:\s/@]+:(?P<value>[^@\s/]{6,})@"
+        ),
+        "medium",
+        group=1,
+        check_placeholder=True,
+    ),
+    SecretRule(
         "jwt",
         "jeton JWT",
         re.compile(
@@ -66,6 +121,13 @@ SECRET_RULES = (
         check_placeholder=True,
     ),
 )
+
+# Règles qui ne viennent pas d'un motif : description pour les rapports (SARIF)
+FILE_RULES = {
+    "sensitive-file-tracked": "fichier sensible suivi par git",
+    "sensitive-file-unignored": "fichier sensible absent du .gitignore",
+    "sensitive-file-in-history": "fichier sensible encore présent dans l'historique git",
+}
 
 SENSITIVE_FILE_PATTERNS = (
     ".env.local",

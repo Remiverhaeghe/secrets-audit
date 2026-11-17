@@ -5,7 +5,7 @@ import unittest
 
 from secrets_audit import cli
 from secrets_audit.models import Finding
-from secrets_audit.report import format_json, format_text, sort_findings
+from secrets_audit.report import format_json, format_sarif, format_text, sort_findings
 from tests.support import GITHUB_TOKEN, RepoTestCase, commit_all, make_repo, write
 
 HIGH = Finding("b", "z.env", None, "sensitive-file-tracked", "high", "suivi")
@@ -36,6 +36,34 @@ class ReportTest(unittest.TestCase):
         self.assertEqual("a.txt", vData["findings"][0]["path"])
 
 
+class SarifTest(unittest.TestCase):
+    def test_results_levels_and_locations(self):
+        vRun = json.loads(format_sarif([MEDIUM, HIGH], 1))["runs"][0]
+        self.assertEqual("secrets-audit", vRun["tool"]["driver"]["name"])
+        self.assertEqual(
+            ["error", "warning"], [vItem["level"] for vItem in vRun["results"]]
+        )
+        vLocation = vRun["results"][1]["locations"][0]["physicalLocation"]
+        self.assertEqual("a.txt", vLocation["artifactLocation"]["uri"])
+        self.assertEqual(4, vLocation["region"]["startLine"])
+        self.assertNotIn(
+            "region", vRun["results"][0]["locations"][0]["physicalLocation"]
+        )
+
+    def test_every_reported_rule_is_described(self):
+        vRun = json.loads(format_sarif([MEDIUM, HIGH, OTHER], 2))["runs"][0]
+        vIds = {vRule["id"] for vRule in vRun["tool"]["driver"]["rules"]}
+        self.assertTrue({vItem["ruleId"] for vItem in vRun["results"]} <= vIds)
+        self.assertIn("database-url", vIds)
+        # Plusieurs dépôts : le nom du dépôt précède le chemin
+        self.assertEqual(
+            "a/k.pem",
+            vRun["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"][
+                "uri"
+            ],
+        )
+
+
 class CliTest(RepoTestCase):
     def execute(self, *pArgs):
         vOut = io.StringIO()
@@ -58,6 +86,15 @@ class CliTest(RepoTestCase):
         vCode, vOut = self.execute(self.aRoot, "--json")
         self.assertEqual(1, vCode)
         self.assertEqual("github-token", json.loads(vOut)["findings"][0]["rule"])
+        self.assertNotIn(GITHUB_TOKEN, vOut)
+
+    def test_sarif_option_hides_the_secret(self):
+        vRepo = make_repo(self.aRoot)
+        write(vRepo, "a.txt", f"x {GITHUB_TOKEN}")
+        commit_all(vRepo)
+        vCode, vOut = self.execute(self.aRoot, "--sarif")
+        self.assertEqual(1, vCode)
+        self.assertEqual("2.1.0", json.loads(vOut)["version"])
         self.assertNotIn(GITHUB_TOKEN, vOut)
 
     def test_min_severity_filters_exit_code(self):

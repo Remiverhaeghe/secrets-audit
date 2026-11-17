@@ -7,9 +7,32 @@ from pathlib import Path
 
 from secrets_audit import gitutil, report
 from secrets_audit.models import SEVERITIES
-from secrets_audit.scanner import scan_repo
+from secrets_audit.scanner import scan_repo, scan_staged
 
 logger = logging.getLogger("secrets_audit")
+
+HOOK_MARKER = "# Installé par secrets-audit"
+HOOK_SCRIPT = f"""#!/bin/sh
+{HOOK_MARKER} : bloque un commit qui contiendrait un secret.
+# Pour passer outre une fois, en connaissance de cause : git commit --no-verify
+exec python3 -m secrets_audit . --staged --min-severity high
+"""
+
+
+def install_hook(pRepo: Path) -> int:
+    """Pose le hook pre-commit dans le dépôt ; refuse d'écraser un hook qui n'est pas le sien."""
+    vHooks = pRepo / ".git" / "hooks"
+    if not vHooks.is_dir():
+        logger.error("Pas un dépôt git : %s", pRepo)
+        return 2
+    vHook = vHooks / "pre-commit"
+    if vHook.exists() and HOOK_MARKER not in vHook.read_text(encoding="utf-8"):
+        logger.error("Un autre hook pre-commit existe déjà : %s", vHook)
+        return 2
+    vHook.write_text(HOOK_SCRIPT, encoding="utf-8")
+    vHook.chmod(0o755)
+    print(f"Hook pre-commit installé dans {vHook}")
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +59,16 @@ def build_parser() -> argparse.ArgumentParser:
     rParser.add_argument(
         "--no-history", action="store_true", help="ne pas analyser l'historique git"
     )
+    rParser.add_argument(
+        "--staged",
+        action="store_true",
+        help="analyser seulement ce qui est dans l'index, pour un hook pre-commit",
+    )
+    rParser.add_argument(
+        "--install-hook",
+        action="store_true",
+        help="poser le hook pre-commit dans le dépôt donné",
+    )
     rParser.add_argument("--verbose", action="store_true", help="journal détaillé")
     return rParser
 
@@ -53,14 +86,20 @@ def run(pArgv: list[str]) -> int:
         logger.error("Dossier introuvable : %s", vRoot)
         return 2
 
-    vRepos = gitutil.find_repos(vRoot.resolve())
+    if vArgs.install_hook:
+        return install_hook(vRoot.resolve())
+
+    vRepos = [vRoot.resolve()] if vArgs.staged else gitutil.find_repos(vRoot.resolve())
     vFindings = []
     try:
         for vRepo in vRepos:
             logger.debug("Analyse de %s", vRepo)
-            vFindings.extend(
-                scan_repo(vRepo, tuple(vArgs.ignore), pHistory=not vArgs.no_history)
-            )
+            if vArgs.staged:
+                vFindings.extend(scan_staged(vRepo, tuple(vArgs.ignore)))
+            else:
+                vFindings.extend(
+                    scan_repo(vRepo, tuple(vArgs.ignore), pHistory=not vArgs.no_history)
+                )
     except gitutil.GitError as vError:
         logger.error("git : %s", vError)
         return 2

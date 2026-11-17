@@ -1,0 +1,7 @@
+- id: secrets-audit
+  name: secrets-audit
+  description: Bloque un commit qui contiendrait un secret ou un fichier sensible.
+  entry: secrets-audit . --staged --min-severity high
+  language: python
+  pass_filenames: false
+  always_run: true

@@ -26,6 +26,25 @@ python -m secrets_audit . --no-history         # plus rapide, sans l'historique
 
 Code de sortie : 0 propre, 1 problèmes à la gravité demandée ou au-dessus (moyenne par défaut), 2 erreur (dossier introuvable, git absent).
 
+## Avant chaque commit
+
+```bash
+python -m secrets_audit . --install-hook       # pose .git/hooks/pre-commit
+python -m secrets_audit . --staged             # ce que le hook lance, à la main
+```
+
+Le hook analyse ce qui est dans l'index, pas le disque : un secret ajouté puis effacé du fichier sans refaire `git add` bloque quand même le commit. Il refuse d'écraser un hook pre-commit qui n'est pas le sien. Pour passer outre une fois, `git commit --no-verify`.
+
+Avec [pre-commit](https://pre-commit.com), le dépôt fournit aussi un `.pre-commit-hooks.yaml` :
+
+```yaml
+repos:
+  - repo: https://github.com/Remiverhaeghe/secrets-audit
+    rev: main
+    hooks:
+      - id: secrets-audit
+```
+
 Pour marquer une ligne comme volontaire, ajouter `secrets-audit: ignore` en commentaire sur la même ligne.
 
 ## Tests et qualité

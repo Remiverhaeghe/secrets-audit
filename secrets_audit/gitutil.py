@@ -90,3 +90,17 @@ def history_added_files(pRepo: Path) -> list[str]:
         return []
     rFiles = sorted(set(_split_nul(vOutput)))
     return rFiles
+
+
+def staged_files(pRepo: Path) -> list[str]:
+    """Fichiers ajoutés ou modifiés dans l'index, prêts à partir au prochain commit."""
+    rFiles = _split_nul(
+        _git(pRepo, "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z")
+    )
+    return rFiles
+
+
+def staged_bytes(pRepo: Path, pPath: str) -> bytes:
+    """Contenu d'un fichier tel qu'il est dans l'index, pas tel qu'il est sur le disque."""
+    rData = _git(pRepo, "show", f":{pPath}")
+    return rData

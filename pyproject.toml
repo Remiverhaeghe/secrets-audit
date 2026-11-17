@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "secrets-audit"
 version = "0.1.0"
@@ -6,6 +10,10 @@ requires-python = ">=3.10"
 
 [project.scripts]
 secrets-audit = "secrets_audit.cli:main"
+
+# Seul le paquet s'installe (pre-commit installe le dépôt) : pas les tests.
+[tool.setuptools]
+packages = ["secrets_audit"]
 
 [tool.coverage.run]
 source = ["secrets_audit"]

@@ -74,6 +74,14 @@ def lower_in_tests(pFindings: list[Finding]) -> list[Finding]:
     return rFindings
 
 
+def decode_text(pData: bytes) -> str | None:
+    """Texte d'un contenu, None s'il est trop gros ou binaire."""
+    if len(pData) > MAX_FILE_BYTES or b"\0" in pData[:8000]:
+        return None
+    rText = pData.decode("utf-8", "replace")
+    return rText
+
+
 def read_text(pFile: Path) -> str | None:
     """Contenu texte d'un fichier, None s'il est absent, trop gros ou binaire."""
     try:
@@ -83,9 +91,7 @@ def read_text(pFile: Path) -> str | None:
     except OSError as vError:
         logger.warning("Fichier illisible %s : %s", pFile, vError)
         return None
-    if b"\0" in vData[:8000]:
-        return None
-    rText = vData.decode("utf-8", "replace")
+    rText = decode_text(vData)
     return rText
 
 
@@ -147,3 +153,34 @@ def scan_repo(
                     )
                 )
     return lower_in_tests(rFindings)
+
+
+def scan_staged(pRepo: Path, pIgnore: tuple[str, ...] = ()) -> list[Finding]:
+    """Ce qui partirait au prochain commit : fichiers sensibles et secrets de l'index.
+
+    C'est le contenu indexé qui compte, pas le fichier sur le disque : un secret retiré du
+    fichier mais resté dans l'index part quand même.
+    """
+    vName = pRepo.name
+    rFindings: list[Finding] = []
+    for vPath in gitutil.staged_files(pRepo):
+        if is_ignored(vPath, pIgnore):
+            continue
+        if is_sensitive_name(vPath):
+            rFindings.append(
+                Finding(
+                    vName,
+                    vPath,
+                    None,
+                    "sensitive-file-tracked",
+                    "high",
+                    "fichier sensible sur le point d'être commité",
+                )
+            )
+        if vPath.endswith(SKIPPED_SUFFIXES):
+            continue
+        vText = decode_text(gitutil.staged_bytes(pRepo, vPath))
+        if vText is not None:
+            rFindings.extend(scan_text(vName, vPath, vText))
+    rFindings = lower_in_tests(rFindings)
+    return rFindings

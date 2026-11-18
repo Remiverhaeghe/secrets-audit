@@ -1,0 +1,53 @@
+# Workflow réutilisable : un autre dépôt l'appelle pour s'auditer à chaque push.
+# Exemple dans le README, section « Dans la CI d'un autre dépôt ».
+name: Audit des secrets
+
+on:
+  workflow_call:
+    inputs:
+      min-severity:
+        description: Gravité à partir de laquelle la CI échoue (low, medium, high)
+        type: string
+        default: medium
+      ignore:
+        description: Chemins à ignorer, séparés par des espaces (motifs fnmatch)
+        type: string
+        default: ""
+      version:
+        description: Branche ou tag de secrets-audit à utiliser
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit des secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dépôt à auditer
+        uses: actions/checkout@v7
+        with:
+          path: depot
+          # Historique complet : l'audit cherche aussi les fichiers sensibles déjà supprimés
+          fetch-depth: 0
+          persist-credentials: false
+      - name: secrets-audit
+        uses: actions/checkout@v7
+        with:
+          repository: Remiverhaeghe/secrets-audit
+          ref: ${{ inputs.version }}
+          path: outil
+          persist-credentials: false
+      - name: Audit
+        working-directory: depot
+        env:
+          MIN_SEVERITY: ${{ inputs.min-severity }}
+          IGNORE: ${{ inputs.ignore }}
+        # Entrées passées par l'environnement, jamais collées dans le script
+        run: |
+          vArgs=(--min-severity "$MIN_SEVERITY")
+          read -ra vPatterns <<< "$IGNORE"
+          for vPattern in "${vPatterns[@]}"; do vArgs+=(--ignore "$vPattern"); done
+          PYTHONPATH=../outil python3 -m secrets_audit . "${vArgs[@]}"

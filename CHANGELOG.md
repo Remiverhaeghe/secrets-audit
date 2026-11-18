@@ -3,6 +3,7 @@
 ## Non publié
 
 ### Fonctionnalités
+- Workflow réutilisable `audit.yml` pour auditer un autre dépôt depuis sa CI, avec gravité minimale et chemins ignorés en entrée
 - Hook pre-commit : `--staged` analyse le contenu indexé, `--install-hook` pose le hook sans écraser un hook existant, et `.pre-commit-hooks.yaml` pour l'outil pre-commit
 - Audit des dépôts git d'un dossier : fichiers sensibles suivis par git, présents sans être ignorés ou restés dans l'historique, et secrets en clair dans les fichiers suivis (clés privées, jetons GitHub, Slack, JWT, clés AWS, mots de passe affectés à une variable)
 - Les valeurs trouvées ne sont jamais affichées en entier

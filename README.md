@@ -47,6 +47,25 @@ repos:
 
 Pour marquer une ligne comme volontaire, ajouter `secrets-audit: ignore` en commentaire sur la même ligne.
 
+## Dans la CI d'un autre dépôt
+
+Le dépôt fournit un workflow réutilisable. Dans le dépôt à surveiller, `.github/workflows/secrets.yml` :
+
+```yaml
+name: Secrets
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  audit:
+    uses: Remiverhaeghe/secrets-audit/.github/workflows/audit.yml@main
+    with:
+      min-severity: medium      # facultatif
+      ignore: "docs/* tests/*"  # facultatif, motifs séparés par des espaces
+```
+
+`version` choisit la branche ou le tag de l'outil (`main` par défaut). La CI de ce dépôt appelle le même workflow sur lui-même.
+
 ## Tests et qualité
 
 ```bash

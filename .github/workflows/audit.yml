@@ -17,6 +17,10 @@ on:
         description: Branche ou tag de secrets-audit à utiliser
         type: string
         default: main
+      sarif:
+        description: Envoyer aussi le rapport SARIF à l'analyse du code de GitHub
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,6 +29,8 @@ jobs:
   audit:
     name: Audit des secrets
     runs-on: ubuntu-latest
+    # Pas de permission ajoutée ici : le dépôt appelant accorde security-events: write
+    # seulement s'il demande l'envoi SARIF, les autres appels restent en lecture seule.
     steps:
       - name: Dépôt à auditer
         uses: actions/checkout@v7
@@ -51,3 +57,20 @@ jobs:
           read -ra vPatterns <<< "$IGNORE"
           for vPattern in "${vPatterns[@]}"; do vArgs+=(--ignore "$vPattern"); done
           PYTHONPATH=../outil python3 -m secrets_audit . "${vArgs[@]}"
+      - name: Rapport SARIF
+        if: ${{ always() && inputs.sarif }}
+        working-directory: depot
+        env:
+          IGNORE: ${{ inputs.ignore }}
+        # Code de sortie ignoré : c'est l'étape « Audit » qui décide de l'échec
+        run: |
+          vArgs=(--sarif --min-severity low)
+          read -ra vPatterns <<< "$IGNORE"
+          for vPattern in "${vPatterns[@]}"; do vArgs+=(--ignore "$vPattern"); done
+          PYTHONPATH=../outil python3 -m secrets_audit . "${vArgs[@]}" > ../secrets-audit.sarif || true
+      - name: Envoi à l'analyse du code
+        if: ${{ always() && inputs.sarif }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: secrets-audit.sarif
+          category: secrets-audit

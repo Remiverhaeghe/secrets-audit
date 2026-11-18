@@ -11,6 +11,14 @@ GITHUB_TOKEN = "gh" + "p_" + "A1b2C3" * 6
 AWS_KEY = "AK" + "IA" + "ABCDEFGHIJKLMNOP"
 PRIVATE_KEY_LINE = "-----BEGIN " + "RSA PRIVATE KEY-----"
 REAL_PASSWORD = "Zx9q" + "T7vLm2Qw"
+GITLAB_TOKEN = "glp" + "at-" + "a1B2c3D4e5F6g7H8i9J0"
+STRIPE_KEY = "sk" + "_live_" + "a1B2c3D4" * 3
+GOOGLE_KEY = "AI" + "za" + "Sy" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q"
+ANTHROPIC_KEY = "sk-" + "ant-" + "api03-" + "a1B2c3D4" * 4
+OPENAI_KEY = "sk-" + "proj-" + "a1B2c3D4" * 5
+NPM_TOKEN = "np" + "m_" + "a1B2c3D4e5F6" * 3
+TELEGRAM_TOKEN = "1234567" + "89:AA" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q"
+DATABASE_URL = "postgres" + "ql://app:" + REAL_PASSWORD + "@db:5432/app"
 
 
 def git(pRepo: Path, *pArgs: str) -> None:

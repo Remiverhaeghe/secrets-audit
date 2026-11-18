@@ -10,6 +10,8 @@ Audit d'hygiène des secrets dans les dépôts git d'un dossier. Script Python s
 | `sensitive-file-unignored` | moyenne | fichier sensible présent mais absent du `.gitignore` |
 | `sensitive-file-in-history` | haute | fichier sensible supprimé mais toujours dans l'historique |
 | `private-key`, `github-token`, `aws-access-key`, `slack-token` | haute | secret reconnu dans un fichier suivi |
+| `gitlab-token`, `stripe-key`, `google-api-key`, `anthropic-key`, `openai-key`, `npm-token`, `telegram-bot-token` | haute | clé d'un service reconnue à son préfixe (les clés Stripe de test ne sont pas signalées) |
+| `database-url` | moyenne | mot de passe écrit dans une adresse `postgresql://`, `mysql://`, `mongodb://`, `redis://`... |
 | `jwt`, `generic-assignment` | moyenne | jeton JWT, ou `password`, `secret`, `token`, `api_key` affecté à une valeur qui ressemble à un vrai secret |
 
 Les valeurs d'exemple (`changeme`, `${VAR}`), les expressions de code, les noms d'identifiants et les réglages (`PASSWORD_ALGORITHM`) sont ignorés. Dans les chemins de test, de fixture, de simulation et de documentation, les trouvailles ambiguës passent en gravité faible ; un jeton ou une clé privée reste de gravité haute partout.
@@ -19,6 +21,7 @@ Les valeurs d'exemple (`changeme`, `${VAR}`), les expressions de code, les noms 
 ```bash
 python -m secrets_audit D:\Projet_dev          # tous les dépôts jusqu'à 2 niveaux
 python -m secrets_audit . --json               # rapport JSON
+python -m secrets_audit . --sarif > audit.sarif # rapport SARIF 2.1.0
 python -m secrets_audit . --ignore 'docs/*'    # ignorer des chemins (répétable)
 python -m secrets_audit . --min-severity high  # n'échouer que pour les gravités hautes
 python -m secrets_audit . --no-history         # plus rapide, sans l'historique
@@ -64,7 +67,20 @@ jobs:
       ignore: "docs/* tests/*"  # facultatif, motifs séparés par des espaces
 ```
 
-`version` choisit la branche ou le tag de l'outil (`main` par défaut). La CI de ce dépôt appelle le même workflow sur lui-même.
+`version` choisit la branche ou le tag de l'outil (`main` par défaut). Avec `sarif: true`, les trouvailles s'affichent aussi dans l'onglet Security du dépôt, sur la ligne concernée ; le workflow appelant doit alors accorder `security-events: write` :
+
+```yaml
+jobs:
+  audit:
+    permissions:
+      contents: read
+      security-events: write
+    uses: Remiverhaeghe/secrets-audit/.github/workflows/audit.yml@main
+    with:
+      sarif: true
+```
+
+ La CI de ce dépôt appelle le même workflow sur lui-même.
 
 ## Tests et qualité
 

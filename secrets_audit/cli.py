@@ -42,7 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
         description="Audit d'hygiène des secrets dans les dépôts git d'un dossier.",
     )
     rParser.add_argument("root", nargs="?", default=".", help="dossier à analyser")
-    rParser.add_argument("--json", action="store_true", help="rapport au format JSON")
+    vFormat = rParser.add_mutually_exclusive_group()
+    vFormat.add_argument("--json", action="store_true", help="rapport au format JSON")
+    vFormat.add_argument(
+        "--sarif",
+        action="store_true",
+        help="rapport SARIF 2.1.0, pour l'analyse du code de GitHub",
+    )
     rParser.add_argument(
         "--ignore",
         action="append",
@@ -104,7 +110,11 @@ def run(pArgv: list[str]) -> int:
         logger.error("git : %s", vError)
         return 2
 
-    vFormat = report.format_json if vArgs.json else report.format_text
+    vFormat = report.format_text
+    if vArgs.json:
+        vFormat = report.format_json
+    elif vArgs.sarif:
+        vFormat = report.format_sarif
     print(vFormat(vFindings, len(vRepos)))
     vLimit = report.severity_rank(vArgs.min_severity)
     vBlocking = [

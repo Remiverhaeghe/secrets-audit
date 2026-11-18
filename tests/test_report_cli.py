@@ -6,7 +6,7 @@ import unittest
 from secrets_audit import cli
 from secrets_audit.models import Finding
 from secrets_audit.report import format_json, format_sarif, format_text, sort_findings
-from tests.support import GITHUB_TOKEN, RepoTestCase, commit_all, make_repo, write
+from tests.support import GITHUB_TOKEN, RepoTestCase, commit_all, git, make_repo, write
 
 HIGH = Finding("b", "z.env", None, "sensitive-file-tracked", "high", "suivi")
 MEDIUM = Finding("b", "a.txt", 4, "generic-assignment", "medium", "secret")
@@ -139,3 +139,48 @@ class CliTest(RepoTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StagedAndHookTest(RepoTestCase):
+    def run_cli(self, *pArgs):
+        vOut = io.StringIO()
+        with contextlib.redirect_stdout(vOut):
+            rCode = cli.run(list(pArgs))
+        return rCode, vOut.getvalue()
+
+    def test_staged_reads_the_index_not_the_disk(self):
+        vRepo = make_repo(self.aRoot)
+        write(vRepo, "README.md", "propre\n")
+        commit_all(vRepo)
+        write(vRepo, "config.py", f'TOKEN = "{GITHUB_TOKEN}"\n')
+        git(vRepo, "add", "config.py")
+        # Le secret retiré du disque reste dans l'index : il partirait quand même
+        write(vRepo, "config.py", "TOKEN = lire_variable()\n")
+        vCode, vText = self.run_cli(str(vRepo), "--staged", "--min-severity", "high")
+        self.assertEqual(1, vCode)
+        self.assertIn("config.py:1", vText)
+        self.assertNotIn(GITHUB_TOKEN, vText)
+
+    def test_staged_flags_a_sensitive_file_and_skips_the_committed_ones(self):
+        vRepo = make_repo(self.aRoot)
+        write(vRepo, "ancien.py", f'TOKEN = "{GITHUB_TOKEN}"\n')
+        commit_all(vRepo)
+        write(vRepo, ".env.local", "A=1\n")
+        git(vRepo, "add", "-f", ".env.local")
+        vCode, vText = self.run_cli(str(vRepo), "--staged")
+        self.assertEqual(1, vCode)
+        self.assertIn(".env.local", vText)
+        self.assertNotIn("ancien.py", vText)
+
+    def test_install_hook_then_refuses_a_foreign_hook(self):
+        vRepo = make_repo(self.aRoot)
+        vCode, _ = self.run_cli(str(vRepo), "--install-hook")
+        self.assertEqual(0, vCode)
+        vHook = vRepo / ".git" / "hooks" / "pre-commit"
+        self.assertIn("--staged", vHook.read_text(encoding="utf-8"))
+        self.assertEqual(0, self.run_cli(str(vRepo), "--install-hook")[0])
+        vHook.write_text("#!/bin/sh\necho autre\n", encoding="utf-8")
+        with self.assertLogs("secrets_audit", "ERROR"):
+            self.assertEqual(2, self.run_cli(str(vRepo), "--install-hook")[0])
+        with self.assertLogs("secrets_audit", "ERROR"):
+            self.assertEqual(2, self.run_cli(str(self.aRoot), "--install-hook")[0])

@@ -16,6 +16,8 @@ Audit d'hygiène des secrets dans les dépôts git d'un dossier. Script Python s
 
 Les valeurs d'exemple (`changeme`, `${VAR}`), les expressions de code, les noms d'identifiants et les réglages (`PASSWORD_ALGORITHM`) sont ignorés. Dans les chemins de test, de fixture, de simulation et de documentation, les trouvailles ambiguës passent en gravité faible ; un jeton ou une clé privée reste de gravité haute partout.
 
+![Rapport sur un dépôt fictif : fichier sensible suivi, jeton GitHub et mot de passe de base, valeurs masquées](docs/images/rapport.png)
+
 ## Lancer
 
 ```bash

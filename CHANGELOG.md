@@ -2,6 +2,9 @@
 
 ## Non publié
 
+### Documentation
+- Capture du rapport dans le README, sur un dépôt fictif
+
 ### Fonctionnalités
 - Rapport SARIF 2.1.0 (`--sarif`), et envoi à l'analyse du code de GitHub depuis le workflow réutilisable (`sarif: true`)
 - Nouvelles règles : jetons GitLab, npm et Telegram, clés Stripe, Google, Anthropic et OpenAI, mot de passe dans une adresse de base de données
